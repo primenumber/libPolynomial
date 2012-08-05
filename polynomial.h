@@ -19,6 +19,8 @@ class Polynomial
 	Polynomial(const vector<T> &);
 	Polynomial(const T);
 	Polynomial diff()const;
+	Polynomial i_integ(T)const;
+	T d_integ(T,T)const;
 	Polynomial toMonique()const;
 	static Polynomial variable();
 	Polynomial operator+(const Polynomial<T,U>)const;
@@ -140,6 +142,27 @@ Polynomial<T,U> Polynomial<T,U>::diff()const
 		ary[i-1] = cefs[i]*i;
 	}
 	return Polynomial(ary);
+}
+
+template<class T,class U>
+Polynomial<T,U> Polynomial<T,U>::i_integ(T c)const
+{
+	const int size = cefs.size();
+	vector<T> ary(size+1);
+	int i;
+	for(i = 0;i < size;i++)
+	{
+		ary[i+1] = cefs[i]/(i+1);
+	}
+	ary[0] = c;
+	return Polynomial(ary);
+}
+
+template<class T,class U>
+T Polynomial<T,U>::d_integ(T start,T end)const
+{
+	Polynomial integ = (*this).i_integ(0);
+	return integ(end) - integ(start);
 }
 
 template<class T,class U>

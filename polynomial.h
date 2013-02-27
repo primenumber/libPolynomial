@@ -18,8 +18,6 @@
  * along with libPolynomial. If not, see <http://www.gnu.org/licenses/>.
  */
 
-gplgplgplgpl
-
 #ifndef __POLY_H__
 #define __POLY_H__
 #include <string>

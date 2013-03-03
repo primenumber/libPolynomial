@@ -4,14 +4,160 @@
 #include <gmpxx.h>
 #include "polynomial.h"
 
-mpz_class mod_mpz(mpz_class x,int index,mpz_class data)
+using namespace std;
+
+mpz_class mod_mpz(const mpz_class & x,const mpz_class & data)
 {
 	mpz_class r;
 	mpz_mod(r.get_mpz_t(),x.get_mpz_t(),data.get_mpz_t());
 	return r;
 }
 
-mpf_class log(const mpf_class x)
+class ModuloInt
+{
+	public:
+	friend std::ostream& operator<<(std::ostream &, const ModuloInt &);
+	static mpz_class defaultMod;
+	ModuloInt();
+	ModuloInt(const ModuloInt &);
+	ModuloInt(const mpz_class &,const mpz_class &);
+	ModuloInt(const int,const mpz_class &);
+	ModuloInt operator+(const ModuloInt &)const;
+	ModuloInt & operator+=(const ModuloInt &);
+	ModuloInt operator-(const ModuloInt &)const;
+	ModuloInt & operator-=(const ModuloInt &);
+	ModuloInt operator*(const ModuloInt &)const;
+	ModuloInt & operator*=(const ModuloInt &);
+	ModuloInt operator/(const ModuloInt &)const;
+	ModuloInt & operator/=(const ModuloInt &);
+	ModuloInt & operator=(const ModuloInt &);
+	ModuloInt & operator=(const mpz_class &);
+	ModuloInt & operator=(const int);
+	bool operator==(const ModuloInt &)const;
+	bool operator==(const int)const;
+	bool operator!=(const ModuloInt &)const;
+	bool operator!=(const int)const;
+	private:
+	mpz_class val;
+	mpz_class _mod;
+};
+
+std::ostream& operator<<(std::ostream & os, const ModuloInt & N)
+{
+	os << N.val.get_str();
+	return os;
+}
+
+ModuloInt::ModuloInt()
+{
+	val = 0;
+	_mod = defaultMod;
+}
+
+ModuloInt::ModuloInt(const ModuloInt & N)
+{
+	val = N.val;
+	_mod = N._mod;
+}
+
+ModuloInt::ModuloInt(const mpz_class & N,const mpz_class & mod = defaultMod)
+{
+	val = mod_mpz(N,mod);
+	_mod = mod;
+}
+
+ModuloInt::ModuloInt(const int N,const mpz_class & mod = defaultMod)
+{
+	val = mod_mpz(N,mod);
+	_mod = mod;
+}
+
+ModuloInt ModuloInt::operator+(const ModuloInt & y)const
+{
+	return ModuloInt(mod_mpz((*this).val + y.val,_mod),_mod);
+}
+
+ModuloInt & ModuloInt::operator+=(const ModuloInt & y)
+{
+	val = mod_mpz(val + y.val,_mod);
+	return *this;
+}
+
+ModuloInt ModuloInt::operator-(const ModuloInt & y)const
+{
+	return ModuloInt(mod_mpz((*this).val - y.val,_mod),_mod);
+}
+
+ModuloInt & ModuloInt::operator-=(const ModuloInt & y)
+{
+	val = mod_mpz(val - y.val,_mod);
+	return *this;
+}
+
+ModuloInt ModuloInt::operator*(const ModuloInt & y)const
+{
+	return ModuloInt(mod_mpz((*this).val * y.val,_mod),_mod);
+}
+
+ModuloInt & ModuloInt::operator*=(const ModuloInt & y)
+{
+	val = mod_mpz(val * y.val,_mod);
+	return *this;
+}
+
+ModuloInt ModuloInt::operator/(const ModuloInt & y)const
+{
+	return ModuloInt(mod_mpz((*this).val / y.val,_mod),_mod);
+}
+
+ModuloInt & ModuloInt::operator/=(const ModuloInt & y)
+{
+	val = mod_mpz(val / y.val,_mod);
+	return *this;
+}
+
+ModuloInt & ModuloInt::operator=(const ModuloInt & y)
+{
+	val = y.val;
+	_mod = y._mod;
+	return *this;
+}
+
+ModuloInt & ModuloInt::operator=(const mpz_class & y)
+{
+	val = y;
+	return *this;
+}
+
+ModuloInt & ModuloInt::operator=(const int y)
+{
+	val = y;
+	return *this;
+}
+
+bool ModuloInt::operator==(const ModuloInt & y)const
+{
+	return val == y.val;
+}
+
+bool ModuloInt::operator==(const int y)const
+{
+	return val == y;
+}
+
+bool ModuloInt::operator!=(const ModuloInt & y)const
+{
+	return val != y.val;
+}
+
+bool ModuloInt::operator!=(const int y)const
+{
+	return val != y;
+}
+
+mpz_class ModuloInt::defaultMod = 2;
+
+mpf_class log(const mpf_class x,int depth = 0)
 {
 	if(x > 1.25)
 	{
@@ -22,7 +168,7 @@ mpf_class log(const mpf_class x)
 		mpf_class val = 0.0;
 		mpf_class xexp = x-1.0;
 		int i;
-		for(i = 1;i < 10;i++)
+		for(i = 1;i < depth+10;i++)
 		{
 			val += xexp/i;
 			xexp *= 1.0-x;
@@ -33,7 +179,7 @@ mpf_class log(const mpf_class x)
 
 mpz_class findr(mpz_class n)
 {
-	mpz_class e_min = 4*(log(mpf_class(n.get_str()))*log(mpf_class(n.get_str())))+1;
+	mpz_class e_min = mpz_class((log(mpf_class(n))*log(mpf_class(n)))*4.0+1.0);
 	mpz_class i=e_min;
 	while(1)
 	{
@@ -66,26 +212,38 @@ mpz_class findr(mpz_class n)
 	}
 }
 
-Polynomial<mpz_class,mpz_class> powmodpoly(
-	Polynomial<mpz_class,mpz_class> poly,
-	mpz_class index,
-	Polynomial<mpz_class,mpz_class> modpoly,
-	mpz_class mod)
+Polynomial<ModuloInt,mpz_class> polymodexpr(
+	const Polynomial<ModuloInt,mpz_class> & poly,
+	const mpz_class & r)
+{
+	vector<ModuloInt> ary = poly.getPoly();
+	if(ary.size() <= r.get_si())
+		return Polynomial<ModuloInt,mpz_class>(poly);
+	for(int i = ary.size()-1;i >= r;i--)
+	{
+		ary[i-r.get_si()] += ary[i];
+		ary.pop_back();
+	}
+	return Polynomial<ModuloInt,mpz_class>(ary);
+}
+
+Polynomial<ModuloInt,mpz_class> powmodpoly(
+	const Polynomial<ModuloInt,mpz_class> & poly,
+	const mpz_class & index,
+	const mpz_class & r)
 {
 	if(index == 1)
 	{
-		return poly.map_cefs(mod_mpz,mod);
+		return poly;
 	}
 	else
 	{
-		Polynomial<mpz_class,mpz_class> half = powmodpoly(poly,index/2,modpoly,mod);
-		Polynomial<mpz_class,mpz_class> val = (half^2)%modpoly;
-		val = val.map_cefs(mod_mpz,mod);
+		Polynomial<ModuloInt,mpz_class> half = powmodpoly(poly,index/2,r);
+		Polynomial<ModuloInt,mpz_class> val = polymodexpr(half^2,r);
 		if((index % 2) == 1)
 		{
 			val *= poly;
-			val %= modpoly;
-			val = val.map_cefs(mod_mpz,mod);
+			val = polymodexpr(val,r);
 		}
 		return val;
 	}
@@ -115,8 +273,15 @@ int main()
 {
 	mpz_class n;
 	string s;
-	cin >> s;
-	n.set_str(s,10);
+	do
+	{
+		cout << "primary testing:input number(n >= 2)" << endl;
+		cin >> s;
+		n.set_str(s,10);
+	}
+	while(n < 2);
+	cout << "start" << endl;
+	ModuloInt::defaultMod = n;
 	if(mpz_perfect_power_p(n.get_mpz_t()))//1st step
 	{
 		cout << s << " isn't prime." << endl;
@@ -144,19 +309,21 @@ int main()
 		cout << s << " is prime!" << endl;
 		return 0;
 	}
-	mpz_class amax = 2*sqrt(phi(r))*log(n);
-	Polynomial<mpz_class,mpz_class> x = Polynomial<mpz_class,mpz_class>::variable();
-	mpz_class one = 1;
-	Polynomial<mpz_class,mpz_class> xexpr = (x^r)-one;
-	Polynomial<mpz_class,mpz_class> xexpnmod = powmodpoly(x,n,xexpr,n);
+	mpz_class amax = mpz_class(2*sqrt(phi(r))*log(n));
+	cout << "final step:take some time,r = " << r.get_str() << ",amax = " << amax.get_str() << endl;
+	Polynomial<ModuloInt,mpz_class> x = Polynomial<ModuloInt,mpz_class>::variable();
+	ModuloInt one = ModuloInt(1);
+	Polynomial<ModuloInt,mpz_class> xexpr = (Polynomial<ModuloInt,mpz_class>::monomial(r.get_si(),1))-one;
+	Polynomial<ModuloInt,mpz_class> xexpnmod = x^(n%r);
 	for(i = 1;i < amax;i += 1)
 	{
-		if(powmodpoly(x+i,n,xexpr,n) != (xexpnmod+i)%xexpr)
+		ModuloInt m_I = ModuloInt(i);
+		if(powmodpoly(x+m_I,n,r) != (xexpnmod+m_I))
 		{
 			cout << s << " isn't prime." << endl;
 			return 0;
 		}
 	}
-	cout << s << " is prime!" << endl;
+	cout << s << " is prime!" << _count << endl;
 	return 0;
 }

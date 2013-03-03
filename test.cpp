@@ -1,6 +1,8 @@
 #include <iostream>
 #include "polynomial.h"
 
+using namespace std;
+
 int main()
 {
 	const Polynomial<int> x = Polynomial<int>::variable();

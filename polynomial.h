@@ -31,7 +31,6 @@
 long long _count = 0;
 
 #define THRESHOLD_KARATSUBA		20
-#define THRESHOLD_TOOM_3			60
 
 template<typename T,typename U=int>
 class Polynomial
